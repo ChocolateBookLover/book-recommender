@@ -2,7 +2,7 @@ import streamlit as st       # Streamlit library for web apps
 import requests               # Requests library to fetch API data
 
 # --- Page title ---
-st.title("📚 Tanvika's Book Recommender")
+st.title("Tanvika's Book Recommender")
 
 # --- Start Again button ---
 # This button reloads the app from scratch
