@@ -1,55 +1,53 @@
-import streamlit as st
+import streamlit as st       # Streamlit library for web apps
+import requests               # Requests library to fetch API data
 
-st.title("📚 Tanvika's Book Recommender (Backbone)")
+# --- Page title ---
+st.title("📚 Tanvika's Book Recommender")
 
-# Button to reset the app
+# --- Start Again button ---
+# This button reloads the app from scratch
 if st.button("Start Again"):
-    st.experimental_rerun()  # clears input and results
+    st.experimental_rerun()   # Clears all inputs and displayed books
 
-# User input: describe the kind of book they want
-user_description = st.text_input("Describe what kind of book you want:")
+# --- User input ---
+# Text input box for the user to describe what they want
+user_description = st.text_input("Describe the kind of book you want:")
 
-# Book list with multiple genres and descriptions
-books = [
-    {"title": "Harry Potter", "genre": ["fantasy", "adventure"],
-     "description": "A young wizard learns magic at a school."},
-    {"title": "Land of Stories", "genre": ["fantasy", "adventure"],
-     "description": "Two siblings fall into a world of fairy tales."},
-    {"title": "Powerless", "genre": ["romance","dystopian", "adventure"],
-     "description": "A girl survives in a world where she has no powers."},
-    {"title": "Percy Jackson", "genre": ["fantasy", "mythology", "adventure"],
-     "description": "A boy discovers he is the son of a Greek god."},
-    {"title": "Better Than The Movies", "genre": ["romance", "realistic fiction"],
-     "description": "A girl navigates high school and relationships."},
-    {"title": "Renegades", "genre": ["sci-fi", "adventure", "romance"],
-     "description": "Heroes and villains battle for control of a futuristic city."},
-    {"title": "Circe", "genre": ["mythology"],
-     "description": "A retelling of the life of the witch Circe from Greek mythology."},
-    {"title": "The Traitor's Game", "genre": ["fantasy", "romance", "adventure"],
-     "description": "An adventure story with magic and corruption."}
-]
-
-matches = []
+# --- Only run the book fetching if user typed something ---
 if user_description:
-    user_description = user_description.lower()
-    for book in books:
-        # match if any word from the user input is in the book description or genre
-        if any(word in book["description"].lower() for word in user_description.split()) or \
-           any(word in [g.lower() for g in book["genre"]] for word in user_description.split()):
-            matches.append(book)
+    # Replace spaces with "+" for the API query
+    query = user_description.replace(" ", "+")
     
-    matches = matches[:3]  # limit to top 3 matches
+    # Google Books API URL
+    url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults=10"
+    
+    # Send GET request to API
+    response = requests.get(url)
+    data = response.json()   # Convert JSON response to Python dictionary
 
-    # Display results
-    if matches:
-        st.write("Recommended books:")
-        for book in matches:
-            st.markdown(f"**{book['title']}**")
-            st.write(f"*Genres:* {', '.join(book['genre'])}")
-            st.write(book["description"])
-            st.write("---")
-        
-        # Placeholder for AI integration
-        st.write("AI explanation will go here tomorrow...")
-    else:
-        st.write("Sorry, no books match that description.")
+    # --- Extract books from API data ---
+    books = []
+    for item in data.get("items", []):   # Safely get "items", default empty list
+        info = item["volumeInfo"]        # Book info dictionary
+        books.append({
+            "title": info.get("title", "No title"),
+            "description": info.get("description", "No description available"),
+            "authors": ", ".join(info.get("authors", ["Unknown"])),   # Join authors list
+            "thumbnail": info.get("imageLinks", {}).get("thumbnail", None)
+        })
+
+    displayed_books = books[:5]
+
+    # Loop through each displayed book
+    for i, book in enumerate(displayed_books):
+        st.markdown(f"### {book['title']} by {book['authors']}")   # Bold title and author
+        if book['thumbnail']:
+            st.image(book['thumbnail'], width=120)                  # Show book cover
+        st.write(book["description"])                               # Show description
+
+        # Create a button for each book
+        if st.button(f"🔄 Already Read {i}"):
+            # Replace current book with next one in the API list
+            if len(books) > 5 + i:        # Check if more books are available
+                displayed_books[i] = books[5 + i]
+                st.experimental_rerun()   # Refresh page to show updated book
