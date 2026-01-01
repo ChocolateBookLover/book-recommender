@@ -9,7 +9,7 @@ if user_description:
     st.write("Searching for:", user_description)
 
     query = user_description.replace(" ", "+")
-    url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults=10"
+    url = 
 
     response = requests.get(url)
     st.write("API status:", response.status_code)
