@@ -1,41 +1,62 @@
 import streamlit as st
-import requests
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-st.title("Tanvika's Book Recommender")
+st.title("Tanvika's AI Book Recommender")
 
-user_description = st.text_input("Describe the kind of book you want:")
+# --- User input ---
+user_input = st.text_input(
+    "Describe the kind of book you want (example: magical adventure, emotional fantasy):"
+)
 
-if user_description:
-    st.write("Searching for:", user_description)
+# --- Your book database ---
+books = [
+    {
+        "title": "Harry Potter",
+        "author": "J.K. Rowling",
+        "description": "A young wizard attends a magical school and fights dark forces."
+    },
+    {
+        "title": "Percy Jackson",
+        "author": "Rick Riordan",
+        "description": "A boy discovers he is the son of a Greek god and goes on adventures."
+    },
+    {
+        "title": "Circe",
+        "author": "Madeline Miller",
+        "description": "A witch from Greek mythology learns independence and strength."
+    },
+    {
+        "title": "Better Than The Movies",
+        "author": "Lynn Painter",
+        "description": "A lighthearted high school romance full of humor."
+    }
+]
 
-    query = user_description.replace(" ", "+")
-    url = 
+# --- AI logic: TF-IDF + cosine similarity ---
+if user_input:
+    # Combine user input with book descriptions
+    corpus = [user_input] + [book["description"] for book in books]
 
-    response = requests.get(url)
-    st.write("API status:", response.status_code)
+    # Convert text to numerical vectors
+    vectorizer = TfidfVectorizer()
+    vectors = vectorizer.fit_transform(corpus)
 
-    data = response.json()
+    # Compute similarity between user input and each book
+    similarities = cosine_similarity(vectors[0], vectors[1:])[0]
 
-    books = []
-    for item in data.get("items", []):
-        info = item.get("volumeInfo", {})
-        books.append({
-            "title": info.get("title", "No title"),
-            "description": info.get("description", "No description available"),
-            "authors": ", ".join(info.get("authors", ["Unknown"])),
-            "thumbnail": info.get("imageLinks", {}).get("thumbnail")
-        })
+    # Pair similarity scores with books
+    ranked_books = sorted(
+        zip(similarities, books),
+        reverse=True,
+        key=lambda x: x[0]
+    )
 
-    if not books:
-        st.write("No books found.")
-    else:
-        displayed_books = books[:5]
+    st.subheader("Recommended Books")
 
-        for i, book in enumerate(displayed_books):
-            st.markdown(f"### {book['title']} by {book['authors']}")
-            if book["thumbnail"]:
-                st.image(book["thumbnail"], width=120)
-            st.write(book["description"])
-
-        if st.button("Start Again"):
-            st.experimental_rerun()
+    # Show top 3
+    for score, book in ranked_books[:3]:
+        st.markdown(f"### {book['title']} — {book['author']}")
+        st.write(book["description"])
+        st.write(f"🤖 AI Match Score: {round(score, 2)}")
+        st.write("---")
