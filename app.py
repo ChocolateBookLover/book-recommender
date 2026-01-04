@@ -12,7 +12,7 @@ st.title("📚 Tanvika's AI Book Recommender")
 # Start Again button
 # --------------------
 if st.button("🔄 Start Again"):
-    st.experimental_rerun()
+    st.rerun()
 
 # --------------------
 # User input
