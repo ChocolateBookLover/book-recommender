@@ -14,7 +14,7 @@ st.title("📚 Tanvika's AI Book Recommender")
 
 option = st.selectbox
 "Select which language you want your books to be in:"
-("English, French, German, Russian, Spanish, Italian"))
+("English, French, German, Russian, Spanish, Italian")
 st.write('You selected:', option)
 
 
