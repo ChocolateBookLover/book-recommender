@@ -75,7 +75,7 @@ def fetch_books(query, language_code):
 if user_input:
    books = fetch_books(user_input, language_code)
 
-    if not books:
+if not books:
         st.warning("No books found. Try a different description.")
     else:
         # Prepare text for AI
