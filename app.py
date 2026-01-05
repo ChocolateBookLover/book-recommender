@@ -3,19 +3,16 @@ import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-
 # Page title
-
 st.title("📚 Tanvika's AI Book Recommender")
 
+# Language selector
+option = st.selectbox(
+    "Select which language you want your books to be in:",
+    ["English", "French", "German", "Russian", "Spanish", "Italian"]
+)
 
-# Language Button 
-
-
-option = st.selectbox
-"Select which language you want your books to be in:"
-("English, French, German, Russian, Spanish, Italian")
-st.write('You selected:', option)
+st.write("You selected:", option)
 
 language_map = {
     "English": "eng",
@@ -28,22 +25,16 @@ language_map = {
 
 language_code = language_map[option]
 
-
 # Start Again button
-
 if st.button("🔄 Start Again"):
     st.rerun()
 
-
 # User input
-
 user_input = st.text_input(
     "Describe the kind of book you want (example: a girl who has to fight, emotional coming-of-age):"
 )
 
-
 # Fetch books from Open Library
-
 def fetch_books(query, language_code):
     url = f"https://openlibrary.org/search.json?q={query}"
     response = requests.get(url)
@@ -51,7 +42,7 @@ def fetch_books(query, language_code):
 
     books = []
 
-    for doc in data.get("docs", [])[:30]:
+    for doc in data.get("docs", [])[:40]:
         if language_code not in doc.get("language", []):
             continue
 
@@ -68,20 +59,16 @@ def fetch_books(query, language_code):
 
     return books
 
-
-
 # AI logic
-
 if user_input:
-   books = fetch_books(user_input, language_code)
+    books = fetch_books(user_input, language_code)
 
-if not books:
+    if not books:
         st.warning("No books found. Try a different description.")
-else:
-        # Prepare text for AI
+    else:
         corpus = [user_input] + [book["description"] for book in books]
 
-        vectorizer = TfidfVectorizer()
+        vectorizer = TfidfVectorizer(stop_words="english")
         vectors = vectorizer.fit_transform(corpus)
 
         similarities = cosine_similarity(vectors[0], vectors[1:])[0]
