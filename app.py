@@ -3,27 +3,36 @@ import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# --------------------
+
 # Page title
-# --------------------
+
 st.title("📚 Tanvika's AI Book Recommender")
 
-# --------------------
+
+# Language Button 
+
+
+option = st.selectbox
+    "Select which language you want your books to be in:"
+    ("English, French, German, Russian, Spanish, Italian"))
+st.write('You selected:', option)
+
+
 # Start Again button
-# --------------------
+
 if st.button("🔄 Start Again"):
     st.rerun()
 
-# --------------------
+
 # User input
-# --------------------
+
 user_input = st.text_input(
     "Describe the kind of book you want (example: a girl who has to fight, emotional coming-of-age):"
 )
 
-# --------------------
+
 # Fetch books from Open Library
-# --------------------
+
 def fetch_books(query):
     url = f"https://openlibrary.org/search.json?q={query}"
     response = requests.get(url)
@@ -43,9 +52,9 @@ def fetch_books(query):
 
     return books
 
-# --------------------
+
 # AI logic
-# --------------------
+
 if user_input:
     books = fetch_books(user_input)
 
