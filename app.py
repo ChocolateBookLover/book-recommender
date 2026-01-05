@@ -17,6 +17,17 @@ option = st.selectbox
 ("English, French, German, Russian, Spanish, Italian")
 st.write('You selected:', option)
 
+language_map = {
+    "English": "eng",
+    "French": "fre",
+    "German": "ger",
+    "Russian": "rus",
+    "Spanish": "spa",
+    "Italian": "ita"
+}
+
+language_code = language_map[option]
+
 
 # Start Again button
 
@@ -33,30 +44,36 @@ user_input = st.text_input(
 
 # Fetch books from Open Library
 
-def fetch_books(query):
+def fetch_books(query, language_code):
     url = f"https://openlibrary.org/search.json?q={query}"
     response = requests.get(url)
     data = response.json()
 
     books = []
 
-    for doc in data.get("docs", [])[:15]:
+    for doc in data.get("docs", [])[:30]:
+        if language_code not in doc.get("language", []):
+            continue
+
         books.append({
             "title": doc.get("title", "Unknown title"),
             "author": ", ".join(doc.get("author_name", ["Unknown author"])),
-            "description": doc.get("first_sentence", ["No description available"])[0]
-            if isinstance(doc.get("first_sentence"), list)
-            else doc.get("first_sentence", "No description available"),
+            "description": (
+                doc.get("first_sentence", ["No description available"])[0]
+                if isinstance(doc.get("first_sentence"), list)
+                else doc.get("first_sentence", "No description available")
+            ),
             "cover_id": doc.get("cover_i")
         })
 
     return books
 
 
+
 # AI logic
 
 if user_input:
-    books = fetch_books(user_input)
+   books = fetch_books(user_input, language_code)
 
     if not books:
         st.warning("No books found. Try a different description.")
