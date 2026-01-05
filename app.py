@@ -77,7 +77,7 @@ if user_input:
 
 if not books:
         st.warning("No books found. Try a different description.")
-    else:
+else:
         # Prepare text for AI
         corpus = [user_input] + [book["description"] for book in books]
 
