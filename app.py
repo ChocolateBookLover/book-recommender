@@ -23,13 +23,7 @@ st.title("📚 Tanvika's AI Book Recommender (Open Library Edition)")
 # Big title at the top
 
 
-# ===============================
-# START AGAIN BUTTON
-# ===============================
 
-if st.button("🔄 Start Again"):
-    st.experimental_rerun()
-    # Clears all inputs and displayed books
 
 
 # ===============================
@@ -147,3 +141,11 @@ if user_input:
                 st.image(cover_url, width=150)
 
             st.write("---")  # divider between books
+
+# ===============================
+# START AGAIN BUTTON
+# ===============================
+
+if st.button("🔄 Start Again"):
+    st.rerun()
+    # Clears all inputs and displayed books
