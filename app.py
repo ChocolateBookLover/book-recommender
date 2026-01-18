@@ -1,121 +1,106 @@
-import streamlit as st
-import requests
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+import streamlit as st                     # Streamlit = makes our app into a website
+import requests                           # Lets us talk to websites/APIs like Open Library
+from sklearn.feature_extraction.text import TfidfVectorizer   # Turns text into numbers for AI
+from sklearn.metrics.pairwise import cosine_similarity       # Compares how similar texts are
 
-# =========================
+# ----------------------------------------------------
 # Page Title
-# =========================
+# ----------------------------------------------------
 st.title("📚 Tanvika's AI Book Recommender")
 
-# =========================
-# Language Selector
-# =========================
-language_option = st.selectbox(
-    "🌍 Select book language:",
-    ["English", "French", "German", "Russian", "Spanish", "Italian"]
+# ----------------------------------------------------
+# Language Selector (starts blank on purpose)
+# ----------------------------------------------------
+language = st.selectbox(
+    "🌍 Select the language you want your books in:",
+    ["English", "French", "German", "Spanish", "Italian", "Russian"],
+    index=None,                            # index=None = start with nothing selected
+    placeholder="Choose a language..."
 )
 
+# This maps what the user sees → what Open Library expects
 language_map = {
     "English": "eng",
     "French": "fre",
     "German": "ger",
-    "Russian": "rus",
     "Spanish": "spa",
-    "Italian": "ita"
+    "Italian": "ita",
+    "Russian": "rus"
 }
 
-language_code = language_map[language_option]
-
-# =========================
-# Age Range Selector
-# =========================
-age_option = st.selectbox(
-    "🎯 Select age range:",
-    ["Kids (8–12)", "Teens (13–17)", "Young Adult (18–25)", "Adult (25+)"]
+# ----------------------------------------------------
+# Age Range Selector (also starts blank)
+# ----------------------------------------------------
+age_range = st.selectbox(
+    "🎯 Select the age range for the book:",
+    ["Kids (8–12)", "Teens (13–17)", "Young Adult (18–25)", "Adult (25+)"],
+    index=None,
+    placeholder="Choose an age range..."
 )
 
-age_map = {
-    "Kids (8–12)": ["children", "kids", "juvenile", "middle grade"],
-    "Teens (13–17)": ["teen", "young adult", "ya", "high school"],
-    "Young Adult (18–25)": ["young adult", "new adult", "college"],
-    "Adult (25+)": ["adult", "mature", "classic", "literary"]
-}
-
-age_keywords = age_map[age_option]
-
-# =========================
-# Start Again Button
-# =========================
-if st.button("🔄 Start Again"):
-    st.rerun()
-
-# =========================
-# User Input
-# =========================
+# ----------------------------------------------------
+# User Description Input
+# ----------------------------------------------------
 user_input = st.text_input(
     "Describe the kind of book you want (example: a girl who has to fight, emotional coming-of-age):"
 )
 
-# =========================
-# Fetch Books from Open Library
-# =========================
-def fetch_books(query, language_code, age_keywords):
+# ----------------------------------------------------
+# Start Over Button
+# ----------------------------------------------------
+if st.button("🔄 Start Again"):
+    st.rerun()    # Reloads the whole app and clears everything
+
+# ----------------------------------------------------
+# Function: Fetch books from Open Library
+# ----------------------------------------------------
+def fetch_books(query, language_code):
+    # This is the website we're asking for book data
     url = f"https://openlibrary.org/search.json?q={query}"
-    response = requests.get(url)
-    data = response.json()
+
+    response = requests.get(url)           # Send request to Open Library
+    data = response.json()                 # Convert response into Python dictionary
 
     books = []
 
-    for doc in data.get("docs", [])[:40]:
-        languages = doc.get("language", [])
-
-        if languages and language_code not in languages:
+    # We loop through results and collect only useful info
+    for doc in data.get("docs", [])[:30]:
+        # Skip books that aren't in the selected language
+        if language_code not in doc.get("language", []):
             continue
-
-        text_blob = " ".join([
-            doc.get("title", ""),
-            " ".join(doc.get("subject", [])[:10])
-        ]).lower()
-
-        if age_keywords and not any(word in text_blob for word in age_keywords):
-            continue
-
-        description_parts = []
-
-        if doc.get("first_sentence"):
-            if isinstance(doc["first_sentence"], list):
-                description_parts.append(doc["first_sentence"][0])
-            else:
-                description_parts.append(doc["first_sentence"])
-
-        if doc.get("subject"):
-            description_parts.append(" ".join(doc["subject"][:6]))
-
-        if not description_parts:
-            description_parts.append(doc.get("title", ""))
 
         books.append({
             "title": doc.get("title", "Unknown title"),
             "author": ", ".join(doc.get("author_name", ["Unknown author"])),
-            "description": " ".join(description_parts),
+            "description": (
+                doc.get("first_sentence", ["No description available"])[0]
+                if isinstance(doc.get("first_sentence"), list)
+                else doc.get("first_sentence", "No description available")
+            ),
             "cover_id": doc.get("cover_i")
         })
 
     return books
 
-# =========================
-# AI Matching Logic
-# =========================
-if user_input:
-    books = fetch_books(user_input, language_code, age_keywords)
+
+# ----------------------------------------------------
+# AI + Recommendation Logic
+# ----------------------------------------------------
+if user_input and language and age_range:     # Only runs when ALL inputs are filled
+
+    language_code = language_map[language]    # Convert English → eng, French → fre, etc
+
+    books = fetch_books(user_input, language_code)
 
     if not books:
-        st.warning("No books found. Try a different description, language, or age range.")
+        st.warning("No books found. Try a different description.")
     else:
+        # This is where the AI part starts
+        # We compare what the user typed to each book description
+
         corpus = [user_input] + [book["description"] for book in books]
 
-        vectorizer = TfidfVectorizer(stop_words="english")
+        vectorizer = TfidfVectorizer()        # Turns text into math vectors
         vectors = vectorizer.fit_transform(corpus)
 
         similarities = cosine_similarity(vectors[0], vectors[1:])[0]
@@ -128,11 +113,13 @@ if user_input:
 
         st.subheader("✨ Recommended Books")
 
+        # Show top 3 books
         for score, book in ranked_books[:3]:
             st.markdown(f"### {book['title']}")
             st.write(f"**Author:** {book['author']}")
             st.write(book["description"])
 
+            # Show book cover if available
             if book["cover_id"]:
                 cover_url = f"https://covers.openlibrary.org/b/id/{book['cover_id']}-L.jpg"
                 st.image(cover_url, width=150)
