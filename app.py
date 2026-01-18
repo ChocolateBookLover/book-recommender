@@ -3,16 +3,18 @@ import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Page title
+# =========================
+# Page Title
+# =========================
 st.title("📚 Tanvika's AI Book Recommender")
 
-# Language selector
-option = st.selectbox(
-    "Select which language you want your books to be in:",
+# =========================
+# Language Selector
+# =========================
+language_option = st.selectbox(
+    "🌍 Select book language:",
     ["English", "French", "German", "Russian", "Spanish", "Italian"]
 )
-
-st.write("You selected:", option)
 
 language_map = {
     "English": "eng",
@@ -23,19 +25,42 @@ language_map = {
     "Italian": "ita"
 }
 
-language_code = language_map[option]
+language_code = language_map[language_option]
 
-# Start Again button
+# =========================
+# Age Range Selector
+# =========================
+age_option = st.selectbox(
+    "🎯 Select age range:",
+    ["Kids (8–12)", "Teens (13–17)", "Young Adult (18–25)", "Adult (25+)"]
+)
+
+age_map = {
+    "Kids (8–12)": ["children", "kids", "juvenile", "middle grade"],
+    "Teens (13–17)": ["teen", "young adult", "ya", "high school"],
+    "Young Adult (18–25)": ["young adult", "new adult", "college"],
+    "Adult (25+)": ["adult", "mature", "classic", "literary"]
+}
+
+age_keywords = age_map[age_option]
+
+# =========================
+# Start Again Button
+# =========================
 if st.button("🔄 Start Again"):
     st.rerun()
 
-# User input
+# =========================
+# User Input
+# =========================
 user_input = st.text_input(
     "Describe the kind of book you want (example: a girl who has to fight, emotional coming-of-age):"
 )
 
-# Fetch books from Open Library
-def fetch_books(query, language_code):
+# =========================
+# Fetch Books from Open Library
+# =========================
+def fetch_books(query, language_code, age_keywords):
     url = f"https://openlibrary.org/search.json?q={query}"
     response = requests.get(url)
     data = response.json()
@@ -43,28 +68,50 @@ def fetch_books(query, language_code):
     books = []
 
     for doc in data.get("docs", [])[:40]:
-        if language_code not in doc.get("language", []):
+        languages = doc.get("language", [])
+
+        if languages and language_code not in languages:
             continue
+
+        text_blob = " ".join([
+            doc.get("title", ""),
+            " ".join(doc.get("subject", [])[:10])
+        ]).lower()
+
+        if age_keywords and not any(word in text_blob for word in age_keywords):
+            continue
+
+        description_parts = []
+
+        if doc.get("first_sentence"):
+            if isinstance(doc["first_sentence"], list):
+                description_parts.append(doc["first_sentence"][0])
+            else:
+                description_parts.append(doc["first_sentence"])
+
+        if doc.get("subject"):
+            description_parts.append(" ".join(doc["subject"][:6]))
+
+        if not description_parts:
+            description_parts.append(doc.get("title", ""))
 
         books.append({
             "title": doc.get("title", "Unknown title"),
             "author": ", ".join(doc.get("author_name", ["Unknown author"])),
-            "description": (
-                doc.get("first_sentence", ["No description available"])[0]
-                if isinstance(doc.get("first_sentence"), list)
-                else doc.get("first_sentence", "No description available")
-            ),
+            "description": " ".join(description_parts),
             "cover_id": doc.get("cover_i")
         })
 
     return books
 
-# AI logic
+# =========================
+# AI Matching Logic
+# =========================
 if user_input:
-    books = fetch_books(user_input, language_code)
+    books = fetch_books(user_input, language_code, age_keywords)
 
     if not books:
-        st.warning("No books found. Try a different description.")
+        st.warning("No books found. Try a different description, language, or age range.")
     else:
         corpus = [user_input] + [book["description"] for book in books]
 
