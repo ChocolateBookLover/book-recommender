@@ -1,151 +1,174 @@
 # ===============================
-# IMPORTS – what we need
+# IMPORTS
 # ===============================
-
 import streamlit as st
-# Streamlit lets Python run like a website: buttons, inputs, images, text
-
 import requests
-# Requests lets Python talk to websites / APIs (Open Library in this case)
-
 from sklearn.feature_extraction.text import TfidfVectorizer
-# Converts text (book descriptions) into numbers so AI can compare them
-
 from sklearn.metrics.pairwise import cosine_similarity
-# Calculates similarity between user input and book descriptions numerically
-
 
 # ===============================
 # APP TITLE
 # ===============================
-
-st.title("📚 Tanvika's AI Book Recommender (Open Library Edition)")
-# Big title at the top
-
-
-
-
+st.title("📚 Tanvika's AI Book Recommender")
+# Big title for the app
 
 # ===============================
 # AGE RANGE SELECTOR
 # ===============================
-
 age_range = st.selectbox(
-    "Select age range:",
+    "Select age range (optional):",
     ["", "Kids (8–12)", "Teens (13–17)", "Young Adult (18–25)", "Adult (25+)"],
     index=0
 )
 # Dropdown for age range; blank by default
 
-
 # ===============================
 # USER DESCRIPTION INPUT
 # ===============================
-
 user_input = st.text_input(
     "Describe the kind of book you want (example: a girl who has to fight, magical adventure):"
 )
-# User types what they want
-
+# User types description of the book they want
 
 # ===============================
-# FUNCTION TO FETCH BOOKS FROM OPEN LIBRARY
+# GOOGLE BOOKS FUNCTION
 # ===============================
-
-def fetch_books(query):
+def fetch_books_googlebooks(query, max_results=30):
     """
-    query = what user typed
-    Returns a list of books with:
+    Fetch books from Google Books API.
+    Returns a list of dictionaries with:
         - title
         - author
-        - cover id (to show image)
+        - description
+        - cover_id (URL to thumbnail)
+        - published_date
     """
-    # Open Library search URL
-    url = f"https://openlibrary.org/search.json?q={query}"
+    books = []
 
-    # Send GET request to Open Library
+    # Google Books API URL
+    # You can add &key=YOUR_API_KEY if you have one, otherwise it works publicly
+    url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults={max_results}"
+
     response = requests.get(url)
-    data = response.json()  # Convert JSON response to Python dictionary
+    if response.status_code != 200:
+        st.error("Error fetching data from Google Books API")
+        return books
+
+    data = response.json()
+
+    for item in data.get("items", []):
+        volume_info = item.get("volumeInfo", {})
+
+        title = volume_info.get("title", "Unknown Title")
+        authors = ", ".join(volume_info.get("authors", ["Unknown Author"]))
+        description = volume_info.get("description", "No description available")
+        cover_id = volume_info.get("imageLinks", {}).get("thumbnail", None)
+        published_date = volume_info.get("publishedDate", "N/A")
+
+        books.append({
+            "title": title,
+            "author": authors,
+            "description": description,
+            "cover_id": cover_id,
+            "published_date": published_date
+        })
+
+    return books
+
+# ===============================
+# OPEN LIBRARY FUNCTION (Fallback)
+# ===============================
+def fetch_books_openlibrary(query):
+    """
+    Fetch books from Open Library.
+    Returns a list of dictionaries with:
+        - title
+        - author
+        - description
+        - cover_id
+    """
+    url = f"https://openlibrary.org/search.json?q={query}"
+    response = requests.get(url)
+    data = response.json()
 
     books = []
 
-    # Loop through the first 30 results
     for doc in data.get("docs", [])[:30]:
-        # Some books have a 'first_sentence' list; handle both cases
         description = (
             doc.get("first_sentence", ["No description available"])[0]
             if isinstance(doc.get("first_sentence"), list)
             else doc.get("first_sentence", "No description available")
         )
 
-        # Age info is tricky: Open Library doesn't provide it, so we skip
-        # For now, we can assume all books fit the age range user wants
-
         books.append({
             "title": doc.get("title", "Unknown title"),
             "author": ", ".join(doc.get("author_name", ["Unknown author"])),
             "description": description,
-            "cover_id": doc.get("cover_i", None)
+            "cover_id": f"https://covers.openlibrary.org/b/id/{doc.get('cover_i')}-L.jpg" if doc.get("cover_i") else None,
+            "published_date": doc.get("first_publish_year", "N/A")
         })
 
     return books
 
+# ===============================
+# SOURCE SELECTOR
+# ===============================
+source = st.radio(
+    "Choose book source:",
+    ("Google Books", "Open Library")
+)
+# Lets user choose which source to fetch books from
 
 # ===============================
 # AI LOGIC: TF-IDF + COSINE SIMILARITY
 # ===============================
-
 if user_input:
-    # Fetch books using the Open Library API
-    books = fetch_books(user_input)
+    # Fetch books based on selected source
+    if source == "Google Books":
+        books = fetch_books_googlebooks(user_input)
+    else:
+        books = fetch_books_openlibrary(user_input)
 
     if not books:
         st.warning("No books found. Try a different description.")
     else:
-        # Prepare texts for AI
-        # First element is user input, rest are book descriptions
+        # Prepare texts for AI: user input first, then all book descriptions
         corpus = [user_input] + [book["description"] for book in books]
 
-        # Convert text into numerical vectors using TF-IDF
+        # Convert text into numbers (TF-IDF)
         vectorizer = TfidfVectorizer()
         vectors = vectorizer.fit_transform(corpus)
-        # fit_transform = learns word importance & converts text to numbers
 
         # Compare user input with each book
         similarities = cosine_similarity(vectors[0], vectors[1:])[0]
-        # returns a list of similarity scores
 
-        # Pair each similarity score with its corresponding book
+        # Pair similarity score with book dictionary
         ranked_books = sorted(
             zip(similarities, books),  # zip combines similarity + book
             reverse=True,              # highest similarity first
-            key=lambda x: x[0]         # sort by similarity score
+            key=lambda x: x[0]
         )
 
         # ===============================
         # DISPLAY RESULTS
         # ===============================
-
         st.subheader("✨ Recommended Books")
-
-        # Show top 3
-        for score, book in ranked_books[:3]:
+        for score, book in ranked_books[:3]:  # Top 3
             st.markdown(f"### {book['title']}")
             st.write(f"**Author:** {book['author']}")
+            st.write(f"**Published Date:** {book['published_date']}")
+            st.write(f"**Age Range:** {age_range if age_range else 'N/A'}")
             st.write(book["description"])
             st.write(f"🤖 AI Match Score: {round(score, 2)}")
 
-            # If Open Library has a cover image, display it
+            # Display cover if available
             if book["cover_id"]:
-                cover_url = f"https://covers.openlibrary.org/b/id/{book['cover_id']}-L.jpg"
-                st.image(cover_url, width=150)
+                st.image(book["cover_id"], width=150)
 
-            st.write("---")  # divider between books
+            st.write("---")  # divider
 
 # ===============================
 # START AGAIN BUTTON
 # ===============================
-
 if st.button("🔄 Start Again"):
     st.rerun()
-    # Clears all inputs and displayed books
