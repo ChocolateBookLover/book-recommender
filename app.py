@@ -12,7 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 # ===============================
 
 try:
-    GOOGLE_BOOKS_API = st.secrets["AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"]
+    GOOGLE_BOOKS_API = "AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"
 except KeyError:
     st.error(
         "❌ Google Books API key not found!\n"
