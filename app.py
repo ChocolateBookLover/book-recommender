@@ -11,7 +11,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 # GOOGLE BOOKS API KEY
 # ===============================
 # Replace with your actual API key
-GOOGLE_BOOKS_API = "YOUR_REAL_GOOGLE_BOOKS_API_KEY"  # <-- REPLACE THIS
+GOOGLE_BOOKS_API = "AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"  # <-- REPLACE THIS
 
 # ===============================
 # APP TITLE
