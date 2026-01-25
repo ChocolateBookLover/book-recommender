@@ -3,11 +3,12 @@
 # ===============================
 
 import streamlit as st          # Streamlit turns Python into a web app
-import requests                # Lets us talk to the Google Books API
+import requests # Lets us talk to the Google Books API
+GOOGLE_BOOKS_API = st.secrets["AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"]
 from sklearn.feature_extraction.text import TfidfVectorizer   # Converts text into numbers
 from sklearn.metrics.pairwise import cosine_similarity        # Compares how similar texts are
 
-GOOGLE_BOOKS_API = st.secrets["AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"]
+
 
 
 # APP TITLE
