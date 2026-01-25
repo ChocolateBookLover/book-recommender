@@ -1,0 +1,28 @@
+import requests
+
+# Put your API key here
+GOOGLE_BOOKS_API = "AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"
+
+# Test query
+query = "harry potter"
+
+# Google Books API URL and params
+url = "https://www.googleapis.com/books/v1/volumes"
+params = {
+    "q": query,
+    "maxResults": 5,
+    "key": GOOGLE_BOOKS_API
+}
+
+# Make the request
+response = requests.get(url, params=params)
+
+#Print status and result
+print("Status code:", response.status_code)
+if response.status_code == 200:
+    data = response.json()
+    for i, item in enumerate(data.get("items", []), 1):
+        volume_info = item.get("volumeInfo", {})
+        print(f"{i}. {volume_info.get('title', 'No title')} by {volume_info.get('authors', 'No author')}")
+else:
+    print("Error message:", response.text)
