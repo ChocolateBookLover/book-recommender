@@ -11,7 +11,7 @@ from sklearn.metrics.pairwise import cosine_similarity        # Compares how sim
 # GOOGLE BOOKS API KEY
 # ===============================
 # For now, put your API key directly here
-GOOGLE_BOOKS_API = st.secrets["AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"] 
+GOOGLE_BOOKS_API = "YOUR_REAL_GOOGLE_BOOKS_API_KEY"  # <-- REPLACE with your key
 
 # ===============================
 # APP TITLE
@@ -43,6 +43,8 @@ user_input = st.text_input(
 
 def fetch_books_googlebooks(query, max_results=30):
     books = []
+    
+    # Include API key in URL
     url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults={max_results}&key={GOOGLE_BOOKS_API}"
     response = requests.get(url)
     
@@ -54,6 +56,8 @@ def fetch_books_googlebooks(query, max_results=30):
     
     for item in data.get("items", []):
         volume_info = item.get("volumeInfo", {})
+        
+        # Get book details safely
         title = volume_info.get("title", "Unknown Title")
         authors = ", ".join(volume_info.get("authors", ["Unknown Author"]))
         description = volume_info.get("description", "No description available")
@@ -63,4 +67,45 @@ def fetch_books_googlebooks(query, max_results=30):
         books.append({
             "title": title,
             "author": authors,
-            "des
+            "description": description,
+            "cover_id": cover_id,
+            "published_date": published_date
+        })
+    
+    return books
+
+# ===============================
+# AI LOGIC – Runs after user types something
+# ===============================
+
+if user_input:
+    books = fetch_books_googlebooks(user_input)
+    
+    if not books:
+        st.warning("No books found. Try a different description.")
+    else:
+        corpus = [user_input] + [book["description"] for book in books]
+        vectorizer = TfidfVectorizer()
+        vectors = vectorizer.fit_transform(corpus)
+        similarities = cosine_similarity(vectors[0], vectors[1:])[0]
+        ranked_books = sorted(zip(similarities, books), reverse=True, key=lambda x: x[0])
+        
+        st.subheader("AI Recommended Books")
+        
+        for score, book in ranked_books[:3]:
+            st.markdown(f"### {book['title']}")
+            st.write(f"**Author:** {book['author']}")
+            st.write(f"**Published Date:** {book['published_date']}")
+            st.write(f"**Age Range:** {age_range if age_range else 'N/A'}")
+            st.write(book["description"])
+            st.write(f"🤖 AI Match Score: {round(score, 2)}")
+            if book["cover_id"]:
+                st.image(book["cover_id"], width=150)
+            st.write("---")
+
+# ===============================
+# RESET BUTTON
+# ===============================
+
+if st.button("Start Again"):
+    st.rerun()
