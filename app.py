@@ -7,13 +7,14 @@ import requests                # Lets us talk to the Google Books API
 from sklearn.feature_extraction.text import TfidfVectorizer   # Converts text into numbers
 from sklearn.metrics.pairwise import cosine_similarity        # Compares how similar texts are
 
+GOOGLE_BOOKS_API = st.secrets["AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"]
 
-# ===============================
+
 # APP TITLE
-# ===============================
+
 
 # Big title at the top of the web app
-st.title("📚 Tanvika's AI Book Recommender")
+st.title("Tanvika's AI Book Recommender")
 
 
 # ===============================
