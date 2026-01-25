@@ -2,16 +2,16 @@
 # IMPORTS – Tools our app needs
 # ===============================
 
-import streamlit as st          # Streamlit turns Python into a web app
-import requests                 # Lets us talk to the Google Books API
-from sklearn.feature_extraction.text import TfidfVectorizer   # Converts text into numbers
-from sklearn.metrics.pairwise import cosine_similarity        # Compares how similar texts are
+import streamlit as st
+import requests
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 # ===============================
 # GOOGLE BOOKS API KEY
 # ===============================
-# For now, put your API key directly here
-GOOGLE_BOOKS_API = "AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"  # <-- REPLACE with your key
+# Replace with your actual API key
+GOOGLE_BOOKS_API = "YOUR_REAL_GOOGLE_BOOKS_API_KEY"  # <-- REPLACE THIS
 
 # ===============================
 # APP TITLE
@@ -38,32 +38,35 @@ user_input = st.text_input(
 )
 
 # ===============================
-# GOOGLE BOOKS API FUNCTION
+# GOOGLE BOOKS API FUNCTION (SAFER)
 # ===============================
 
 def fetch_books_googlebooks(query, max_results=30):
     books = []
-    
-    # Include API key in URL
-    url = f"https://www.googleapis.com/books/v1/volumes?q={query}&maxResults={max_results}&key={GOOGLE_BOOKS_API}"
-    response = requests.get(url)
-    
+
+    url = "https://www.googleapis.com/books/v1/volumes"
+    params = {
+        "q": query,
+        "maxResults": max_results,
+        "key": GOOGLE_BOOKS_API
+    }
+
+    response = requests.get(url, params=params)
+
     if response.status_code != 200:
-        st.error("❌ Error fetching data from Google Books API")
+        st.error(f"❌ Error fetching data from Google Books API (status {response.status_code})")
         return books
-    
+
     data = response.json()
-    
+
     for item in data.get("items", []):
         volume_info = item.get("volumeInfo", {})
-        
-        # Get book details safely
         title = volume_info.get("title", "Unknown Title")
         authors = ", ".join(volume_info.get("authors", ["Unknown Author"]))
         description = volume_info.get("description", "No description available")
         cover_id = volume_info.get("imageLinks", {}).get("thumbnail", None)
         published_date = volume_info.get("publishedDate", "N/A")
-        
+
         books.append({
             "title": title,
             "author": authors,
@@ -71,7 +74,7 @@ def fetch_books_googlebooks(query, max_results=30):
             "cover_id": cover_id,
             "published_date": published_date
         })
-    
+
     return books
 
 # ===============================
@@ -80,7 +83,7 @@ def fetch_books_googlebooks(query, max_results=30):
 
 if user_input:
     books = fetch_books_googlebooks(user_input)
-    
+
     if not books:
         st.warning("No books found. Try a different description.")
     else:
@@ -89,9 +92,9 @@ if user_input:
         vectors = vectorizer.fit_transform(corpus)
         similarities = cosine_similarity(vectors[0], vectors[1:])[0]
         ranked_books = sorted(zip(similarities, books), reverse=True, key=lambda x: x[0])
-        
+
         st.subheader("AI Recommended Books")
-        
+
         for score, book in ranked_books[:3]:
             st.markdown(f"### {book['title']}")
             st.write(f"**Author:** {book['author']}")
