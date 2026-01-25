@@ -1,5 +1,5 @@
 # ===============================
-# IMPORTS – Tools our app needs
+# IMPORTS
 # ===============================
 
 import streamlit as st
@@ -8,10 +8,18 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 # ===============================
-# GOOGLE BOOKS API KEY
+# LOAD GOOGLE BOOKS API KEY FROM SECRETS
 # ===============================
-# Replace with your actual API key
-GOOGLE_BOOKS_API = "AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"  # <-- REPLACE THIS
+
+try:
+    GOOGLE_BOOKS_API = st.secrets["AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"]
+except KeyError:
+    st.error(
+        "❌ Google Books API key not found!\n"
+        "Add it to Streamlit Secrets as:\n\n"
+        "GOOGLE_BOOKS_API = 'YOUR_API_KEY'"
+    )
+    st.stop()
 
 # ===============================
 # APP TITLE
@@ -20,7 +28,7 @@ GOOGLE_BOOKS_API = "AIzaSyA6EUaBbf-ynFckyKiIFSXkQ7wvbBEwAB4"  # <-- REPLACE THIS
 st.title("Tanvika's AI Book Recommender")
 
 # ===============================
-# AGE RANGE SELECTOR (Optional)
+# AGE RANGE SELECTOR
 # ===============================
 
 age_range = st.selectbox(
@@ -30,7 +38,7 @@ age_range = st.selectbox(
 )
 
 # ===============================
-# USER INPUT – What kind of book do they want?
+# USER INPUT
 # ===============================
 
 user_input = st.text_input(
@@ -38,12 +46,11 @@ user_input = st.text_input(
 )
 
 # ===============================
-# GOOGLE BOOKS API FUNCTION (SAFER)
+# GOOGLE BOOKS API FUNCTION
 # ===============================
 
 def fetch_books_googlebooks(query, max_results=30):
     books = []
-
     url = "https://www.googleapis.com/books/v1/volumes"
     params = {
         "q": query,
@@ -55,6 +62,10 @@ def fetch_books_googlebooks(query, max_results=30):
 
     if response.status_code != 200:
         st.error(f"❌ Error fetching data from Google Books API (status {response.status_code})")
+        try:
+            st.json(response.json())  # Show the API error if available
+        except:
+            pass
         return books
 
     data = response.json()
@@ -78,7 +89,7 @@ def fetch_books_googlebooks(query, max_results=30):
     return books
 
 # ===============================
-# AI LOGIC – Runs after user types something
+# AI LOGIC
 # ===============================
 
 if user_input:
