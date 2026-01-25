@@ -96,9 +96,8 @@ def fetch_books_googlebooks(query, max_results=30):
     return books
 
 
-# ===============================
 # AI LOGIC – Runs after user types something
-# ===============================
+
 
 if user_input:
 
@@ -106,15 +105,15 @@ if user_input:
     books = fetch_books_googlebooks(user_input)
 
     if not books:
-        st.warning("⚠️ No books found. Try a different description.")
+        st.warning(" No books found. Try a different description.")
 
     else:
-        # Step 2: Build a list of text for the AI
+        #  2: Build a list of text for the AI
         # First item = user's description
         # Then every book's description
         corpus = [user_input] + [book["description"] for book in books]
 
-        # Step 3: Convert text into numbers using TF-IDF
+        #  Convert text into numbers using TF-IDF
         vectorizer = TfidfVectorizer()
         vectors = vectorizer.fit_transform(corpus)
 
@@ -133,12 +132,12 @@ if user_input:
         # DISPLAY RESULTS
         # ===============================
 
-        st.subheader("✨ AI Recommended Books")
+        st.subheader(" AI Recommended Books")
 
         # Show the top 3 best matches
         for score, book in ranked_books[:3]:
 
-            st.markdown(f"### 📖 {book['title']}")
+            st.markdown(f"###  {book['title']}")
             st.write(f"**Author:** {book['author']}")
             st.write(f"**Published Date:** {book['published_date']}")
             st.write(f"**Age Range:** {age_range if age_range else 'N/A'}")
@@ -152,10 +151,10 @@ if user_input:
             st.write("---")  # Divider between books
 
 
-# ===============================
+
 # RESET BUTTON
-# ===============================
+
 
 # Lets the user start over
-if st.button("🔄 Start Again"):
+if st.button(" Start Again"):
     st.rerun()
