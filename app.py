@@ -12,7 +12,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 # ===============================
 
 try:
-    GOOGLE_BOOKS_API = 
+    GOOGLE_BOOKS_API = "AIzaSyDFzZtFbcDYxx2YMWl75174pcGsd2jwnKo"
 except KeyError:
     st.error(
         "❌ Google Books API key not found!\n"
@@ -46,10 +46,42 @@ user_input = st.text_input(
 )
 
 # ===============================
+# KEYWORD EXTRACTION
+# ===============================
+
+# Common words to filter out for better search
+STOP_WORDS = {
+    'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by', 'from', 'is', 'are', 'was', 'were', 'be', 'been',
+    'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+    'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need',
+    'about', 'into', 'through', 'during', 'before', 'after', 'above',
+    'below', 'between', 'under', 'again', 'further', 'then', 'once',
+    'here', 'there', 'when', 'where', 'why', 'how', 'all', 'each',
+    'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not',
+    'only', 'own', 'same', 'so', 'than', 'too', 'very', 'just', 'also',
+    'now', 'i', 'me', 'my', 'myself', 'we', 'our', 'you', 'your', 'he',
+    'him', 'his', 'she', 'her', 'it', 'its', 'they', 'them', 'their',
+    'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those',
+    'am', 'as', 'if', 'because', 'until', 'while', 'like', 'want',
+    'wants', 'kind', 'type', 'book', 'books', 'story', 'stories', 'read',
+    'something', 'anything', 'everything', 'nothing', 'someone', 'anyone'
+}
+
+def extract_keywords(text):
+    """Extract meaningful keywords from conversational text."""
+    import re
+    # Remove punctuation and convert to lowercase
+    words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+    # Filter out stop words and short words
+    keywords = [w for w in words if w not in STOP_WORDS and len(w) > 2]
+    return ' '.join(keywords) if keywords else text
+
+# ===============================
 # GOOGLE BOOKS API FUNCTION
 # ===============================
 
-def fetch_books_googlebooks(query, max_results=30):
+def fetch_books_googlebooks(query, max_results=40):
     books = []
     url = "https://www.googleapis.com/books/v1/volumes"
     params = {
@@ -72,9 +104,14 @@ def fetch_books_googlebooks(query, max_results=30):
 
     for item in data.get("items", []):
         volume_info = item.get("volumeInfo", {})
+        description = volume_info.get("description")
+
+        # Skip books without descriptions (can't do AI matching)
+        if not description:
+            continue
+
         title = volume_info.get("title", "Unknown Title")
         authors = ", ".join(volume_info.get("authors", ["Unknown Author"]))
-        description = volume_info.get("description", "No description available")
         cover_id = volume_info.get("imageLinks", {}).get("thumbnail", None)
         published_date = volume_info.get("publishedDate", "N/A")
 
@@ -93,12 +130,15 @@ def fetch_books_googlebooks(query, max_results=30):
 # ===============================
 
 if user_input:
-    books = fetch_books_googlebooks(user_input)
+    # Extract keywords for better Google Books search
+    search_query = extract_keywords(user_input)
+    books = fetch_books_googlebooks(search_query)
 
     if not books:
         st.warning("No books found. Try a different description.")
     else:
-        corpus = [user_input] + [book["description"] for book in books]
+        # Combine title and description for better AI matching
+        corpus = [user_input] + [f"{book['title']} {book['description']}" for book in books]
         vectorizer = TfidfVectorizer()
         vectors = vectorizer.fit_transform(corpus)
         similarities = cosine_similarity(vectors[0], vectors[1:])[0]
